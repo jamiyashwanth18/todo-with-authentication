@@ -7,7 +7,17 @@ _No routes found._
 <!-- sdlc:auto:end endpoints -->
 
 <!-- sdlc:auto:start drift -->
-_Code matches the designed API._
+**Designed but missing:**
+
+- DELETE /api/tasks/{id}
+- GET /api/auth/me
+- GET /api/health
+- GET /api/tasks
+- PATCH /api/tasks/{id}
+- POST /api/auth/login
+- POST /api/auth/logout
+- POST /api/auth/register
+- POST /api/tasks
 <!-- sdlc:auto:end drift -->
 
 <!-- sdlc:auto:start source -->

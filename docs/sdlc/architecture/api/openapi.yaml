@@ -2,6 +2,231 @@
 openapi: 3.1.0
 info:
   title: TODO with authentication
-  version: architecture-v0
+  version: architecture-v1
   description: Designed API from the approved architecture (not extracted from code).
-paths: {}
+paths:
+  /api/auth/login:
+    post:
+      summary: Sign in with email and password, throttled per source IP (US-003, US-004,
+        US-005)
+      description: Sign in with email and password, throttled per source IP (US-003,
+        US-004, US-005)
+      operationId: post_api_auth_login
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: '{email, password}'
+      responses:
+        '200':
+          description: '200 {id, name, email} + Set-Cookie sid (HttpOnly, Secure,
+            SameSite=Lax, Max-Age 2592000). 401 {detail: ''Email or password is incorrect''}.
+            429 {detail: ''Too many attempts, try again later''}'
+  /api/auth/logout:
+    post:
+      summary: Revoke the server-side session and clear the cookie (US-007)
+      description: Revoke the server-side session and clear the cookie (US-007)
+      operationId: post_api_auth_logout
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: empty
+      responses:
+        '200':
+          description: 204 + expired Set-Cookie
+      security:
+      - bearerAuth: []
+  /api/auth/me:
+    get:
+      summary: Return the current user, used by the SPA route guards (US-006, US-008)
+      description: Return the current user, used by the SPA route guards (US-006,
+        US-008)
+      operationId: get_api_auth_me
+      parameters: []
+      responses:
+        '200':
+          description: 200 {id, name, email} or 401
+      security:
+      - bearerAuth: []
+  /api/auth/register:
+    post:
+      summary: Create an account and sign in automatically (US-001, US-002)
+      description: Create an account and sign in automatically (US-001, US-002)
+      operationId: post_api_auth_register
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: '{name: string non-blank, email: EmailStr, password: string
+                min 8}'
+      responses:
+        '200':
+          description: '201 {id, name, email} + Set-Cookie sid. 422 field errors {field,
+            message}. 409 {detail: ''An account with this email already exists''}'
+  /api/health:
+    get:
+      summary: Load balancer health check
+      description: Load balancer health check
+      operationId: get_api_health
+      parameters: []
+      responses:
+        '200':
+          description: 200 {status:'ok'}
+  /api/tasks:
+    get:
+      summary: List the signed-in user's tasks, newest first, unpaginated (US-011,
+        US-015)
+      description: List the signed-in user's tasks, newest first, unpaginated (US-011,
+        US-015)
+      operationId: get_api_tasks
+      parameters: []
+      responses:
+        '200':
+          description: 200 [{id, title, completed, created_at}]
+      security:
+      - bearerAuth: []
+    post:
+      summary: Create a task (US-010)
+      description: Create a task (US-010)
+      operationId: post_api_tasks
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: '{title: string, 1-255 chars after trim}'
+      responses:
+        '200':
+          description: 201 {id, title, completed:false, created_at}. 422 title errors
+      security:
+      - bearerAuth: []
+  /api/tasks/{id}:
+    patch:
+      summary: Edit the title and/or set completed (US-012, US-013)
+      description: Edit the title and/or set completed (US-012, US-013)
+      operationId: patch_api_tasks_id
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: '{title?: string 1-255, completed?: boolean}'
+      responses:
+        '200':
+          description: 200 task. 422 validation. 404 if missing or not owned
+      security:
+      - bearerAuth: []
+    delete:
+      summary: Permanently delete a task (US-014)
+      description: Permanently delete a task (US-014)
+      operationId: delete_api_tasks_id
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: 204. 404 if missing or not owned
+      security:
+      - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    users:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+        password_hash:
+          type: string
+      required:
+      - id
+      - name
+      - email
+      - password_hash
+    tasks:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        completed:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - user_id
+      - title
+      - completed
+      - created_at
+    sessions:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        token_hash:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        revoked_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - user_id
+      - token_hash
+      - created_at
+      - expires_at
+    login_attempts:
+      type: object
+      properties:
+        id:
+          type: string
+        source_ip:
+          type: string
+        attempted_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - source_ip
+      - attempted_at
